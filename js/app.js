@@ -81,11 +81,18 @@ function transformJSON(jsonData) {
 async function loadData() {
     const loadingElement = document.getElementById('loading');
     const basePath = window.location.pathname.split('/')[1] === 'pension-app'   ? '/pension-app'  : '';
+
+    // ✅ 添加调试日志
+    console.log('当前路径:', window.location.pathname);
+    console.log('基础路径:', basePath);
     
     try {
-        // ✅ 关键修改1：添加时间戳防止HTTP缓存
         const timestamp = new Date().getTime();
-        const response = await fetch(`${basePath}/data/pension_data.json?t=${timestamp}`, {
+        const dataUrl = `${basePath}/data/pension_data.json?t=${timestamp}`;
+        
+        console.log('尝试加载数据:', dataUrl); // ✅ 确认完整的请求 URL
+        
+        const response = await fetch(dataUrl, {
             method: 'GET',
             headers: {
                 'Cache-Control': 'no-cache',
@@ -94,23 +101,22 @@ async function loadData() {
         });
         
         if (!response.ok) {
-            throw new Error(`JSON文件加载失败: ${response.status}`);
+            throw new Error(`JSON文件加载失败: ${response.status} ${response.statusText}`);
         }
         
-        // ✅ 关键修改2：成功获取后更新Service Worker缓存
+        // ✅ 修复：使用模板字符串而非字符串字面量
         if ('caches' in window) {
             const cache = await caches.open('pension-app-v1');
-            // 克隆一份response用于缓存
             const responseClone = response.clone();
-            await cache.put('${basePath}/data/pension_data.json', responseClone);
+            await cache.put(dataUrl, responseClone); // ✅ 使用变量 dataUrl
+            console.log('数据已缓存到:', dataUrl);
         }
         
         const jsonData = await response.json();
         rawData = transformJSON(jsonData);
         
-        console.log(`✅ 成功加载最新数据: ${rawData.length} 条记录`);
+        console.log(`✅ 成功加载 ${rawData.length} 条记录`);
         
-        // 隐藏错误信息（如果有）
         if (loadingElement) {
             loadingElement.style.display = 'none';
         }
@@ -120,33 +126,33 @@ async function loadData() {
     } catch (error) {
         console.error('❌ 数据加载错误:', error);
         
-        // ✅ 关键修改3：尝试从Service Worker缓存读取
+        // ✅ 修复：尝试从缓存读取时使用正确的路径
         try {
             if ('caches' in window) {
                 const cache = await caches.open('pension-app-v1');
-                const cachedResponse = await cache.match('/data/pension_data.json');
+                const dataUrl = `${basePath}/data/pension_data.json`;
+                const cachedResponse = await cache.match(dataUrl);
                 
                 if (cachedResponse) {
-                    console.log('ℹ️ 使用Service Worker缓存数据');
+                    console.log('ℹ️ 使用缓存数据:', dataUrl);
                     const jsonData = await cachedResponse.json();
                     rawData = transformJSON(jsonData);
-                    
-                    // 显示离线提示
                     showOfflineMessage();
-                    
                     initializeApp();
-                    return; // 成功使用缓存，不再执行后续代码
+                    return;
+                } else {
+                    console.log('ℹ️ 未找到缓存数据:', dataUrl);
                 }
             }
         } catch (cacheError) {
-            console.log('缓存读取失败:', cacheError);
+            console.error('缓存读取失败:', cacheError);
         }
         
         // 如果网络失败且缓存也没有，使用示例数据
         console.log('ℹ️ 使用示例数据作为最后手段');
         rawData = getSampleData();
         
-        // 显示错误信息
+        // 显示错误信息a
         if (loadingElement) {
             loadingElement.innerHTML = `
                 <div style="color: #e53e3e; padding: 12px; background: #fef2f2; border-radius: 6px; margin-bottom: 12px;">
@@ -1685,5 +1691,6 @@ function setupRefreshButton() {
         refreshBtn.addEventListener('click', refreshData);
     }
 }
+
 
 
