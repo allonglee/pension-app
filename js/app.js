@@ -80,11 +80,12 @@ function transformJSON(jsonData) {
  */
 async function loadData() {
     const loadingElement = document.getElementById('loading');
+    const basePath = window.location.pathname.split('/')[1] === 'pension-app'   ? '/pension-app'  : '';
     
     try {
         // ✅ 关键修改1：添加时间戳防止HTTP缓存
         const timestamp = new Date().getTime();
-        const response = await fetch(`/data/pension_data.json?t=${timestamp}`, {
+        const response = await fetch(`${basePath}/data/pension_data.json?t=${timestamp}`, {
             method: 'GET',
             headers: {
                 'Cache-Control': 'no-cache',
@@ -101,7 +102,7 @@ async function loadData() {
             const cache = await caches.open('pension-app-v1');
             // 克隆一份response用于缓存
             const responseClone = response.clone();
-            await cache.put('/data/pension_data.json', responseClone);
+            await cache.put('${basePath}/data/pension_data.json', responseClone);
         }
         
         const jsonData = await response.json();
@@ -1684,4 +1685,5 @@ function setupRefreshButton() {
         refreshBtn.addEventListener('click', refreshData);
     }
 }
+
 
