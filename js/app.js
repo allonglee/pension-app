@@ -84,7 +84,7 @@ async function loadData() {
     try {
         // ✅ 关键修改1：添加时间戳防止HTTP缓存
         const timestamp = new Date().getTime();
-        const response = await fetch(`/static/data/pension_data.json?t=${timestamp}`, {
+        const response = await fetch(`/data/pension_data.json?t=${timestamp}`, {
             method: 'GET',
             headers: {
                 'Cache-Control': 'no-cache',
@@ -101,7 +101,7 @@ async function loadData() {
             const cache = await caches.open('pension-app-v1');
             // 克隆一份response用于缓存
             const responseClone = response.clone();
-            await cache.put('/static/data/pension_data.json', responseClone);
+            await cache.put('/data/pension_data.json', responseClone);
         }
         
         const jsonData = await response.json();
@@ -123,7 +123,7 @@ async function loadData() {
         try {
             if ('caches' in window) {
                 const cache = await caches.open('pension-app-v1');
-                const cachedResponse = await cache.match('/static/data/pension_data.json');
+                const cachedResponse = await cache.match('/data/pension_data.json');
                 
                 if (cachedResponse) {
                     console.log('ℹ️ 使用Service Worker缓存数据');
@@ -1628,7 +1628,7 @@ async function refreshData() {
     // 清除旧缓存并重新加载
     if ('caches' in window) {
         const cache = await caches.open('pension-app-v1');
-        await cache.delete('/static/data/pension_data.json');
+        await cache.delete('/data/pension_data.json');
     }
     
     await loadData();
@@ -1684,3 +1684,4 @@ function setupRefreshButton() {
         refreshBtn.addEventListener('click', refreshData);
     }
 }
+
